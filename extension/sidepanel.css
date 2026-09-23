@@ -1,1 +1,343 @@
-:root{color-scheme:light;--paper:#f6f7f2;--ink:#192c2a;--muted:#647570;--line:#dce3da;--accent:#137b66;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink)}header{padding:30px 22px 24px;background:linear-gradient(135deg,#e7efe4, #f6f7f2);border-bottom:1px solid var(--line)}.eyebrow{font-size:10px;font-weight:750;letter-spacing:2px;display:flex;justify-content:space-between}.eyebrow span{letter-spacing:0;color:var(--muted)}h1{font-size:25px;letter-spacing:-1px;line-height:1.4;margin:18px 0 6px}.accent{color:var(--accent)}header p{color:var(--muted);margin:0;font-size:12px}main{padding:0 20px 24px}section{padding:20px 0;border-bottom:1px solid var(--line)}.connection,.source-head,.actions{display:flex;align-items:center;justify-content:space-between;gap:10px}.connection strong{font-size:12px}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#99a39e;margin-right:8px}.dot.online{background:var(--accent)}button,select,textarea{font:inherit}button{cursor:pointer;border:1px solid var(--line);border-radius:9px;background:white;color:var(--ink);padding:10px 12px;transition:background .15s}button:hover:not(:disabled){background:#e9f0e7}button:disabled{opacity:.5;cursor:default}.small{font-size:11px;padding:7px 10px}.section-label{font-size:11px;color:var(--accent);font-weight:700;letter-spacing:1px;margin-bottom:13px}.section-label span{color:var(--ink);letter-spacing:0;margin-left:8px}.modes{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.modes button{font-size:12px;padding:11px 5px}.source-head{font-size:11px;color:var(--muted);margin:14px 0 8px}.source-head .section-label{margin:0}.text-button{border:0;background:transparent;font-size:11px;padding:4px;color:var(--accent)}textarea{width:100%;resize:vertical;min-height:116px;max-height:350px;padding:12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);line-height:1.6;font-size:13px}textarea:focus,select:focus{outline:2px solid #82b5a1;outline-offset:1px}label{display:flex;align-items:center;justify-content:space-between;gap:10px;color:var(--muted);font-size:12px;margin:10px 0}select{max-width:72%;min-width:160px;padding:8px;border:1px solid var(--line);background:#fff;border-radius:7px;color:var(--ink);font-size:12px}.actions{margin-top:17px}.primary{background:var(--accent);color:white;border-color:var(--accent);flex:1;display:flex;justify-content:space-between;font-weight:600}.primary:hover:not(:disabled){background:#0c624f}.translation{min-height:145px}.translation .source-head{margin-top:0}#result{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85;font-size:14px;user-select:text}#result.empty{color:#8a9690;font-size:12px}#preview{max-width:100%;max-height:220px;object-fit:contain;border-radius:8px;border:1px solid var(--line);margin-bottom:8px}#error{background:#fff0e9;color:#934828;border:1px solid #f0cfbc;border-radius:8px;padding:10px;margin-top:14px;font-size:12px;line-height:1.6;overflow-wrap:anywhere}footer{font-size:10px;line-height:1.8;color:var(--muted);padding-top:19px}details{margin-top:12px}summary{cursor:pointer}code{overflow-wrap:anywhere}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}[hidden]{display:none!important}
+:root {
+    color-scheme: light;
+    --paper: #f6f7f2;
+    --ink: #192c2a;
+    --muted: #647570;
+    --line: #dce3da;
+    --accent: #137b66;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px
+}
+
+* {
+    box-sizing: border-box
+}
+
+body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink)
+}
+
+header {
+    padding: 16px 16px 12px;
+    background: linear-gradient(135deg, #e7efe4, #f6f7f2);
+    border-bottom: 1px solid var(--line)
+}
+
+.eyebrow {
+    font-size: 10px;
+    font-weight: 750;
+    letter-spacing: 2px;
+    display: flex;
+    justify-content: space-between
+}
+
+.eyebrow span {
+    letter-spacing: 0;
+    color: var(--muted)
+}
+
+h1 {
+    font-size: 20px;
+    letter-spacing: -1px;
+    line-height: 1.4;
+    margin: 8px 0 0
+}
+
+.accent {
+    color: var(--accent)
+}
+
+header p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 12px
+}
+
+main {
+    padding: 0 14px 16px
+}
+
+section {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line)
+}
+
+.connection, .source-head, .actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px
+}
+
+.connection strong {
+    font-size: 12px
+}
+
+.dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #99a39e;
+    margin-right: 8px
+}
+
+.dot.online {
+    background: var(--accent)
+}
+
+button, select, textarea {
+    font: inherit
+}
+
+button {
+    cursor: pointer;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    background: white;
+    color: var(--ink);
+    padding: 8px 10px;
+    transition: background .15s
+}
+
+button:hover:not(:disabled) {
+    background: #e9f0e7
+}
+
+button:disabled {
+    opacity: .5;
+    cursor: default
+}
+
+.small {
+    font-size: 11px;
+    padding: 7px 10px
+}
+
+.section-label {
+    font-size: 11px;
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 1px;
+    margin-bottom: 9px
+}
+
+.section-label span {
+    color: var(--ink);
+    letter-spacing: 0;
+    margin-left: 8px
+}
+
+.modes {
+    display: grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap: 7px
+}
+
+.modes button {
+    font-size: 12px;
+    padding: 8px 5px
+}
+
+.source-head {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 9px 0 6px
+}
+
+.source-head .section-label {
+    margin: 0
+}
+
+.text-button {
+    border: 0;
+    background: transparent;
+    font-size: 11px;
+    padding: 4px;
+    color: var(--accent)
+}
+
+textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 80px;
+    max-height: 350px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ink);
+    line-height: 1.6;
+    font-size: 13px
+}
+
+textarea:focus, select:focus {
+    outline: 2px solid #82b5a1;
+    outline-offset: 1px
+}
+
+label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    color: var(--muted);
+    font-size: 12px;
+    margin: 10px 0
+}
+
+select {
+    max-width: 72%;
+    min-width: 160px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 7px;
+    color: var(--ink);
+    font-size: 12px
+}
+
+.actions {
+    margin-top: 12px
+}
+
+.primary {
+    background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600
+}
+
+.primary:hover:not(:disabled) {
+    background: #0c624f
+}
+
+.translation {
+    min-height: 100px
+}
+
+.translation .source-head {
+    margin-top: 0
+}
+
+#result {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    line-height: 1.85;
+    font-size: 14px;
+    user-select: text
+}
+
+#result.empty {
+    color: #8a9690;
+    font-size: 12px
+}
+
+#preview {
+    max-width: 100%;
+    max-height: 220px;
+    object-fit: contain;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    margin-bottom: 8px
+}
+
+#error {
+    background: #fff0e9;
+    color: #934828;
+    border: 1px solid #f0cfbc;
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow-wrap: anywhere
+}
+
+footer {
+    font-size: 10px;
+    line-height: 1.8;
+    color: var(--muted);
+    padding-top: 12px
+}
+
+details {
+    margin-top: 12px
+}
+
+summary {
+    cursor: pointer
+}
+
+code {
+    overflow-wrap: anywhere
+}
+
+button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px
+}
+
+[hidden] {
+    display: none !important
+}
+
+/* 三项偏好始终同排，允许控件收缩以适配窄侧栏。 */
+.preferences {
+    display: grid;
+    grid-template-columns:minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 8px
+}
+
+.preferences label {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+    margin: 0
+}
+
+.preferences select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 7px 4px;
+    text-overflow: ellipsis
+}
+
+.hint {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin: 8px 0
+}
+
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    font-size: 11px;
+    color: var(--muted)
+}
+
+.shortcut-row strong {
+    color: var(--ink);
+    overflow-wrap: anywhere
+}
+
+.shortcut-row .text-button {
+    flex-shrink: 0
+}
+
+#hover {
+    width: 100%;
+    font-size: 12px
+}

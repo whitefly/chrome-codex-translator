@@ -1,16 +1,74 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Codex Translate</title><link rel="stylesheet" href="sidepanel.css"></head>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Codex Translate</title>
+    <link rel="stylesheet" href="sidepanel.css">
+</head>
 <body>
-<header><div class="eyebrow">CODEX TRANSLATE <span>0.2</span></div><h1>读懂眼前的内容<span class="accent">。</span></h1><p>选中文字、网页区域，或一张截图。</p></header>
+<header>
+    <div class="eyebrow">CODEX TRANSLATE <span>0.3</span></div>
+    <h1>翻译与设置</h1></header>
 <main>
-<section class="connection"><div><span id="dot" class="dot"></span><strong id="status" role="status">未连接</strong></div><button id="connect" class="small">连接 Codex</button></section>
-<div id="error" role="alert" hidden></div>
-<section><button id="hover" class="primary">在当前网页启用悬停翻译 ↗</button><p style="font-size:11px;color:var(--muted)">悬停点击「译」，或 Option/Alt 悬停直译。结果显示在原文旁。</p></section>
-<section><div class="section-label">01 <span>选择内容</span></div><div class="modes"><button data-mode="selection">划词</button><button data-mode="element">选择元素</button><button data-mode="screenshot">截图</button></div>
-<div class="source-head"><span id="source-label">也可以直接粘贴文字</span><button id="clear" class="text-button">清空</button></div>
-<img id="preview" alt="待翻译的截图预览" hidden><textarea id="source" placeholder="在页面选中文字，或在这里粘贴…" maxlength="30000" aria-label="待翻译文本"></textarea></section>
-<section><div class="section-label">02 <span>翻译偏好</span></div><label>目标语言<select id="language"><option>简体中文</option><option>繁體中文</option><option>English</option><option>日本語</option><option>한국어</option></select></label><label>模型<select id="model" disabled><option value="">连接后读取可用模型</option></select></label><label>思考强度<select id="effort" disabled><option value="">模型默认</option></select></label>
-<div class="actions"><button id="translate" class="primary" disabled>开始翻译 <span>↗</span></button><button id="cancel" hidden>停止</button></div></section>
-<section class="translation"><div class="source-head"><div class="section-label">03 <span>译文</span></div><button id="copy" class="text-button" disabled>复制</button></div><div id="result" aria-live="polite">译文会逐步显示在这里。</div></section>
-<footer>通过本机 Codex 发送至模型服务。<br>只在点击「开始翻译」后发送所选内容。<details><summary>首次连接与安装</summary><p>先加载此扩展，再使用项目的安装脚本注册本地桥接程序。复制下面的扩展 ID，参见 README。</p><code id="extension-id"></code><p>本地 Codex 需要完成登录。网页无法选择时，请点击当前标签的扩展图标重新授权。</p></details></footer>
-</main><script type="module" src="sidepanel.js"></script></body></html>
+    <section class="connection">
+        <div><span id="dot" class="dot"></span><strong id="status" role="status">未连接</strong></div>
+        <button id="connect" class="small">连接 Codex</button>
+    </section>
+    <div id="error" role="alert" hidden></div>
+    <section class="hover-settings">
+        <button id="hover" class="primary">在当前网页启用悬停翻译 ↗</button>
+        <p class="hint">悬停点击「译」，或 Option/Alt 直译；Esc 退出模式。</p>
+        <div class="shortcut-row"><span>进入翻译模式：<strong id="shortcut" role="status">读取中…</strong></span>
+            <button id="configure-shortcut" class="text-button">设置快捷键 ↗</button>
+        </div>
+    </section>
+    <section>
+        <div class="section-label">01 <span>选择内容</span></div>
+        <div class="modes">
+            <button data-mode="selection">划词</button>
+            <button data-mode="element">选择元素</button>
+            <button data-mode="screenshot">截图</button>
+        </div>
+        <div class="source-head"><span id="source-label">也可以直接粘贴文字</span>
+            <button id="clear" class="text-button">清空</button>
+        </div>
+        <img id="preview" alt="待翻译的截图预览" hidden><textarea id="source" placeholder="在页面选中文字，或在这里粘贴…"
+                                                                  maxlength="30000" aria-label="待翻译文本"></textarea>
+    </section>
+    <section>
+        <div class="section-label">02 <span>翻译偏好</span></div>
+        <div class="preferences"><label>语言<select id="language">
+            <option>简体中文</option>
+            <option>繁體中文</option>
+            <option>English</option>
+            <option>日本語</option>
+            <option>한국어</option>
+        </select></label><label>模型<select id="model" disabled>
+            <option value="">连接后读取可用模型</option>
+        </select></label><label>思考强度<select id="effort" disabled>
+            <option value="">模型默认</option>
+        </select></label></div>
+        <div class="actions">
+            <button id="translate" class="primary" disabled>开始翻译 <span>↗</span></button>
+            <button id="cancel" hidden>停止</button>
+        </div>
+    </section>
+    <section class="translation">
+        <div class="source-head">
+            <div class="section-label">03 <span>译文</span></div>
+            <button id="copy" class="text-button" disabled>复制</button>
+        </div>
+        <div id="result" aria-live="polite">译文会逐步显示在这里。</div>
+    </section>
+    <footer>通过本机 Codex 发送至模型服务。<br>只在点击「开始翻译」后发送所选内容。
+        <details>
+            <summary>首次连接与安装</summary>
+            <p>先加载此扩展，再使用项目的安装脚本注册本地桥接程序。复制下面的扩展 ID，参见 README。</p><code
+                id="extension-id"></code>
+            <p>本地 Codex 需要完成登录。网页无法选择时，请点击当前标签的扩展图标重新授权。</p></details>
+    </footer>
+</main>
+<script type="module" src="sidepanel.js"></script>
+</body>
+</html>

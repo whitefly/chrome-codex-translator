@@ -77,3 +77,14 @@ for (const key of ['model', 'effort', 'language']) $(key).onchange = () => {
 };
 chrome.runtime.onMessage.addListener(message => { if (message.type === 'state') render({ ...current, ...message.state }); });
 try { render(await send('getState')); } catch(error) { showError(error); }
+
+async function refreshShortcut() {
+  try {
+    const commands = await chrome.commands.getAll();
+    $('shortcut').textContent = commands.find(command => command.name === 'enter-translation-mode')?.shortcut || '未设置';
+  } catch (error) { showError(error); }
+}
+$('configure-shortcut').onclick = () => chrome.tabs.create({url: 'chrome://extensions/shortcuts'}).catch(showError);
+window.addEventListener('focus', refreshShortcut);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshShortcut(); });
+void refreshShortcut();

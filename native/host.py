@@ -13,6 +13,8 @@ import sys
 import tempfile
 import time
 
+from diagnostics import REQUEST_ID, configure_logging, elapsed, record
+
 HOST_NAME = 'com.local.codex_translator'
 MAX_MESSAGE = 12 * 1024 * 1024
 INSTRUCTIONS = ('You are a reading assistant. Perform only the requested translation or summary on the supplied text or image. '
@@ -88,6 +90,7 @@ class CodexClient:
         async with self.start_lock:
             if self.process and self.process.returncode is None:
                 return
+            record('codex.starting')
             path = await asyncio.to_thread(resolve_codex)
             # No stdout logs: this channel belongs exclusively to Chrome framing.
             self.process = await asyncio.create_subprocess_exec(path, 'app-server',
@@ -106,20 +109,32 @@ class CodexClient:
         await self.process.stdin.drain()
 
     async def call(self, method, params):
+        # 记录协议调用耗时，用于区分握手、建会话与启动任务的等待。
         self.counter += 1
         request_id = self.counter
         future = asyncio.get_running_loop().create_future()
         self.pending[request_id] = future
+        started = time.monotonic()
+        record('rpc.sent', rpc_id=request_id, method=method)
         try:
             await self.send({'id': request_id, 'method': method, 'params': params})
-            return await asyncio.wait_for(future, 35)
+            result = await asyncio.wait_for(future, 35)
+            record('rpc.completed', rpc_id=request_id, method=method, elapsed_ms=elapsed(started))
+            return result
+        except Exception as error:
+            record('rpc.failed', rpc_id=request_id, method=method, elapsed_ms=elapsed(started), error_type=type(error).__name__)
+            raise
         finally:
             self.pending.pop(request_id, None)
 
     async def read_loop(self):
+        # 记录回传元数据，保留异常类型而不输出敏感协议正文。
         try:
             while line := await self.process.stdout.readline():
                 msg = json.loads(line)
+                error = msg.get('error') or {}
+                record('codex.received', request_id=None, rpc_id=msg.get('id'), method=msg.get('method'),
+                       has_error=bool(error), error_code=error.get('code') if isinstance(error.get('code'), int) else None)
                 if 'method' in msg and 'id' in msg:
                     # This translation client never grants tool approvals.
                     if msg['method'].endswith('/requestApproval'):
@@ -135,9 +150,10 @@ class CodexClient:
                             future.set_result(msg.get('result', {}))
                 else:
                     self.on_event(msg)
-        except Exception:
-            pass
+        except Exception as error:
+            record('codex.read_failed', error_type=type(error).__name__)
         finally:
+            record('codex.disconnected', returncode=self.process.returncode)
             for future in list(self.pending.values()):
                 if not future.done():
                     future.set_exception(RuntimeError('Codex 连接已断开，请重新连接'))
@@ -179,17 +195,25 @@ def validate_translation(message):
 
 class Host:
     def __init__(self, emit):
-        self.emit = emit
+        self.output = emit
         self.client = CodexClient(self.event)
         self.active = None
         self.models = []
         self.jobs = set()
+
+    def emit(self, message):
+        self.output(message)
+        record('chrome.sent', method=message.get('type'), request_id=message.get('requestId'),
+               chars=len(message.get('text', '')), cancelled=message.get('cancelled'),
+               has_error=message.get('type') == 'error')
 
     def event(self, event):
         state = self.active
         if not state:
             return
         method, params = event.get('method'), event.get('params', {})
+        record('translation.event', request_id=state['id'], method=method,
+               elapsed_ms=elapsed(state['started']))
         if method == 'bridge/disconnected':
             state['error'] = 'Codex 连接已断开，请重试'
             state['done'].set()
@@ -238,7 +262,7 @@ class Host:
             self.emit({'type': 'error', 'requestId': request_id, 'message': '已有翻译进行中，请先取消'})
             return
         state = dict(id=request_id, done=asyncio.Event(), cancel=False, thread=None, turn=None,
-                     text='', finals={}, phases={}, status='failed', error=None)
+                     text='', finals={}, phases={}, status='failed', error=None, started=time.monotonic())
         self.active = state
         temp = tempfile.TemporaryDirectory(prefix='codex-translate-')
         try:
@@ -291,9 +315,11 @@ class Host:
             if state['status'] != 'completed' and not state['cancel']:
                 raise RuntimeError('翻译未完成：' + state['status'])
         except asyncio.TimeoutError:
+            record('translation.timeout', elapsed_ms=elapsed(state['started']))
             await self.interrupt(state)
             self.emit({'type': 'error', 'requestId': request_id, 'message': '翻译超时，请重试或更换模型'})
         except Exception as error:
+            record('translation.failed', elapsed_ms=elapsed(state['started']), error_type=type(error).__name__)
             await self.interrupt(state)
             self.emit({'type': 'error', 'requestId': request_id, 'message': str(error)[:1500]})
         finally:
@@ -303,6 +329,8 @@ class Host:
                     await asyncio.wait_for(self.client.call('thread/unsubscribe', {'threadId': state['thread']}), 3)
             temp.cleanup()
             self.active = None
+            record('translation.finished', elapsed_ms=elapsed(state['started']), cancelled=state['cancel'],
+                   status=state['status'], has_error=bool(state['error']))
             self.emit({'type': 'done', 'requestId': request_id, 'cancelled': state['cancel'],
                        'text': '\n\n'.join(state['finals'].values()) or state['text']})
 
@@ -312,6 +340,9 @@ class Host:
                 await self.client.call('turn/interrupt', {'threadId': state['thread'], 'turnId': state['turn']})
 
     async def dispatch(self, message):
+        # 将浏览器请求 ID 关联到该任务中的协议调用与回传。
+        token = REQUEST_ID.set(message.get('requestId'))
+        record('chrome.received', method=message.get('type'))
         try:
             kind = message.get('type')
             if kind == 'connect':
@@ -327,7 +358,10 @@ class Host:
             elif kind not in ('cancel',):
                 raise ValueError('Unknown message type')
         except Exception as error:
+            record('dispatch.failed', error_type=type(error).__name__)
             self.emit({'type': 'error', 'requestId': message.get('requestId'), 'message': str(error)[:1500]})
+        finally:
+            REQUEST_ID.reset(token)
 
     async def run(self):
         try:
@@ -349,6 +383,7 @@ class Host:
 
 
 if __name__ == '__main__':
+    configure_logging()
     try:
         asyncio.run(Host(lambda message: write_message(sys.stdout.buffer, message)).run())
     except (BrokenPipeError, EOFError):
