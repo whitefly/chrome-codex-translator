@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Codex Translate · 本地翻译助手",
+  "description": "悬停段落，在原文旁流式翻译或总结；支持划词、截图与本机 Codex。",
+  "version": "0.3.0",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "sidePanel",
+    "nativeMessaging",
+    "contextMenus"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "启用当前网页悬停翻译"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "commands": {
+    "toggle-hover": {
+      "suggested_key": {
+        "default": "Alt+Shift+Y",
+        "mac": "MacCtrl+Shift+Y"
+      },
+      "description": "切换当前网页的悬停翻译模式"
+    },
+    "translate-selection": {
+      "suggested_key": {
+        "default": "Alt+Shift+T",
+        "mac": "MacCtrl+Shift+T"
+      },
+      "description": "提取选中文字并打开翻译面板"
+    }
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAzUPMFphP04jj8u0ATo0c0G0AgHoZg2YhoQDnFy8cUGXFRSS6UGoh9Lin91vrYA+yqjT7rfmgDCqzoqw2+dFjPUCeAqEXts5rab7b1K+Kc9yY2VQs+FzX0ns2BdHjdkERKLGgV9Voqx6uPUaAekye5mp/72gFGd1CW2+JNH9jQtAOGDCP8f5iOfamKb5J8tarDoKebUrF6lv7yHc04FpJiXmWhxT1af+dQLbdCbWxmCgTFzuH8JhNssJUDHKpESKgjbTIzBLMKmg7A3vpwuf0RR3YSxT12mDDPpetaW52bdPbaQFjzBWEf4IspnEWXMWuiCUglaV6ynoKOdnIMCHuGwIDAQAB"
+}

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+.DS_Store
+native/config.json
+native/launch.sh
+.env
+node_modules/
+test-artifacts/

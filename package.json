@@ -1,0 +1,13 @@
+{
+  "name": "chrome-codex-translator",
+  "version": "0.3.0",
+  "private": true,
+  "description": "Chrome translation extension with a Python Codex App Server bridge",
+  "scripts": {
+    "test:ui": "node tests/ui.cjs && node tests/background.cjs && node tests/hover.cjs",
+    "test": "python3 -B -m unittest discover -s tests -v"
+  },
+  "devDependencies": {
+    "playwright": "^1.56.0"
+  }
+}
