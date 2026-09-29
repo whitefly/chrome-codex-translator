@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'native'))
 from host import Host
+from codex_translator import CodexTranslator
 
 async def main(model=None, image=None):
     messages = []
@@ -16,9 +17,10 @@ async def main(model=None, image=None):
             print(message['text'], end='', flush=True)
         elif message['type'] == 'error':
             print('\nERROR:', message['message'])
-    host = Host(emit)
+    translator = CodexTranslator()
+    host = Host(emit, translator)
     try:
-        models = await host.get_models()
+        models = (await translator.connect()).models
         selected = next((m for m in models if m['model'] == model), None) if model else next((m for m in models if m.get('isDefault')), models[0])
         if not selected:
             raise RuntimeError('Requested model unavailable')
@@ -37,7 +39,7 @@ async def main(model=None, image=None):
         assert done['text'].strip(), 'Empty translation'
         print('\nPASS — streamed events:', sum(m['type'] == 'delta' for m in messages))
     finally:
-        await host.client.close()
+        await host.close()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

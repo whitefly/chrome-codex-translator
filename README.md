@@ -134,7 +134,10 @@ python3 -B scripts/smoke_test.py --image tests/example.png
 
 ```text
 extension/       Manifest、后台任务、选区脚本、侧边栏
-native/host.py   Chrome 消息封装、Codex 客户端、翻译调度
+native/host.py   Chrome 消息封装、输入校验、翻译调度
+native/translator.py   Translator 接口与请求、结果、能力类型
+native/codex_translator.py   Codex 翻译会话、增量结果、临时图片
+native/codex_client.py   Codex 子进程与 JSON-RPC 通信
 scripts/         安装、诊断、真实翻译检查
 tests/          Python 单元测试、浏览器交互测试
 docs/           架构、开发协议、排错和测试记录
@@ -155,3 +158,7 @@ rm "$HOME/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.loc
 ### 回传日志
 
 刷新扩展后，本地桥接会将脱敏诊断日志写入项目 `log/bridge-<进程ID>.log`。记录协议回传、请求 ID、耗时、字符数及错误类型，不记录原文、译文或截图。单文件 2 MiB，保留两份轮转备份；旧进程文件可手动清理。查看方法见 [排错文档](docs/TROUBLESHOOTING.md#回传诊断日志)。
+
+### 翻译服务接口
+
+`Host(emit, translator=...)` 支持注入实现 `Translator` 协议的服务，默认创建并复用 `CodexTranslator`。接口包含 `connect`、`translate`、`cancel`、`close`；请求与结果使用 dataclass，非流式服务直接返回最终结果。当前仍只启用 Codex，后续有道等服务需要实现接口并接入前端的服务选择与能力展示。Codex 子进程跨请求复用，每次翻译只新建临时会话。

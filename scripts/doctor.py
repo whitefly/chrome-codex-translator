@@ -4,7 +4,7 @@ import asyncio
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'native'))
-from host import CodexClient, resolve_codex
+from codex_client import CodexClient, resolve_codex
 
 async def main():
     print('Python:', sys.version.split()[0])

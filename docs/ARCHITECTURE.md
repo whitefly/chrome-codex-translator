@@ -59,7 +59,7 @@ Codex 登录由现有 CLI 管理，扩展不会复制 auth.json、密钥或 toke
 
 ## 扩展方向
 
-可在 host 中抽象 Translator 接口，接入独立 API 或本地模型；前端保持 connect/translate/cancel 协议。后续可以增加逐段双语插入、术语表、更多 iframe 支持和可选历史。
+Host 已通过 Translator 接口解耦供应商，前端保持 connect/translate/cancel 协议。后续可以增加逐段双语插入、术语表、更多 iframe 支持和可选历史。
 
 ## 依据
 
@@ -87,3 +87,16 @@ hoverTranslate 使用 storage.local 保存的模型/思考强度/目标语言，
 ## 0.3 总结、暂存与快捷键
 
 普通悬停 450ms 显示“译 / 总”，两种操作共享现有 Native Messaging 流和单任务限制。`hoverTranslate` 携带 `kind` 与段落路径，后台以 `task: summary` 或 `task: translate` 转发给 Python host；host 为摘要使用独立提示词，仍按当前设置的目标语言返回。后台验证请求来源是已启用的顶层标签，并按 `documentId` 回传流式状态。扩展命令 `enter-translation-mode` 在当前标签启用模式，无默认按键；侧栏通过 `chrome.commands.getAll()` 显示用户绑定，并提供 Chrome 快捷键设置入口。Esc 与停用按钮共用退出逻辑，清理页面状态并通过 `hoverDisable` 撤销后台启用状态。
+
+
+## Translator 边界
+
+- `host.py` 负责消息帧、边界校验、单请求约束、增量和最终结果转发、统一错误及脱敏日志。
+- `translator.py` 使用 Protocol 定义 `connect()`、`translate(request, on_delta)`、`cancel(request_id)`、`close()`；请求、结果、就绪状态和能力使用 dataclass。模型与思考强度可选，模型描述保持现有 Chrome 字段结构。
+- `codex_translator.py` 处理 Codex 特有的模型校验、临时会话、任务提示词、事件过滤、取消与图片清理；`codex_client.py` 负责子进程与 JSON-RPC。
+
+Host 创建时注入一个长期复用的 Translator；默认使用 Codex。能力声明用于在发起调用前拒绝不支持的总结或截图任务。非流式服务可以完全不调用增量回调，直接返回 `TranslationResult`；最终结果覆盖增量草稿。服务异常由 Host 转成 `error` 后再发 `done`，保持前端解除忙碌状态。取消只路由到匹配的请求，取消后的增量及旧请求迟到的增量会被丢弃。进程退出时先收回任务，再关闭供应商。
+
+`CodexClient.start()` 通过启动锁和进程存活检查复用同一 app-server。临时会话及图片按请求清理，150 秒结果等待与 35 秒协议调用超时仍由 Codex 实现管理。Chrome 无法向接口传入任意本地文件路径。
+
+本次未接入有道 API、密钥或服务切换界面。未来接入时实现 Translator 并注入 Host，再扩展前端服务选择、语言和能力展示；当前前端仍按 Codex 模型列表工作。
