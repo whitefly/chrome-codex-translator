@@ -1,11 +1,52 @@
-__pycache__/
-*.pyc
-.DS_Store
-native/config.json
-native/launch.sh
-.env
+# Node.js 依赖、构建与测试产物
 node_modules/
-test-artifacts/
-log/
-dist/
+/dist/
+/test-artifacts/
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.tsbuildinfo
+
+# Python 虚拟环境与缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# 本机桥接配置与启动脚本（由安装脚本生成）
+/native/config.json
+/native/launch.sh
+
+# 环境变量与凭据；保留可公开的配置示例
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.template
+
+# 运行日志
+/log/
+*.log
+*.log.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# macOS 与编辑器本机文件
+.DS_Store
+._*
 .idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+*~
