@@ -20,9 +20,11 @@ const path=require('node:path');
   await page.addScriptTag({type:'module',path:path.resolve(__dirname,'../dist/background.js')});
   await page.evaluate(()=>installed());
   const menus=await page.evaluate(()=>menus);
-  assert.deepEqual(menus.map(item=>item.id),['translate','select-region']);
-  assert.equal(menus[1].title,'框选翻译区域');
-  assert.ok(menus[1].contexts.includes('page') && menus[1].contexts.includes('link'));
+  assert.deepEqual(menus.map(({id,title})=>({id,title})),[{id:'select-point',title:'点选'},{id:'select-region',title:'框选'}]);
+  for(const menu of menus) {
+   assert.deepEqual(menu.contexts,['page','selection','link','image','video','audio']);
+   assert.deepEqual(menu.documentUrlPatterns,['http://*/*','https://*/*','file:///*']);
+  }
   await page.evaluate(()=>send({type:'connect'}));
   await page.evaluate(()=>nativeReceive({type:'ready',models:[],loggedIn:true}));
   const result=await page.evaluate(()=>send({type:'picked',mode:'screenshot',rect:{x:50,y:30,width:100,height:50,viewportWidth:400,viewportHeight:300}},{id:'test',tab:{id:1,windowId:1,title:'Test'},frameId:0}));
@@ -110,19 +112,27 @@ const path=require('node:path');
   const disabled=await page.evaluate(sender=>send({type:'hoverDisable'},sender),sender);
   assert.equal(disabled.ok,true);
   assert.equal((await page.evaluate(sender=>send({type:'hoverTranslate',requestId:'after-exit',text:'Blocked'},sender),sender)).ok,false);
-  // 未启用的页面也能从原生右键菜单直接框选，不打开侧栏或调用模型。
+  // 两个菜单入口均能从未启用页面直接进入模式，不改写原文、打开侧栏或调用模型。
+  await page.evaluate(sender=>send({type:'picked',mode:'selection',text:'Context selection'},sender),sender);
   const modelCalls=await page.evaluate(()=>posted.length);
   const panelCalls=await page.evaluate(()=>sidePanelCalls.length);
+  const activations=await page.evaluate(()=>tabMessages.filter(args=>args[1].type==='hoverEnable').length);
+  await page.evaluate(()=>menuClick({menuItemId:'select-point',selectionText:'Ignored selection'},{id:1,windowId:1,url:'https://example.test/article'}));
+  await page.waitForFunction(count=>tabMessages.filter(args=>args[1].type==='hoverEnable').length>count,activations);
+  assert.equal(await page.evaluate(()=>tabMessages.at(-1)[0]),1);
+  assert.deepEqual(await page.evaluate(()=>tabMessages.at(-1)[1]),{type:'hoverEnable',enabled:true,mode:'hover'});
+  assert.deepEqual(await page.evaluate(()=>scriptCalls.at(-1)),{target:{tabId:1},files:['hover.js']});
+  assert.equal(await page.evaluate(()=>posted.length),modelCalls);
+  assert.equal(await page.evaluate(()=>sidePanelCalls.length),panelCalls);
+  assert.equal(await page.evaluate(async()=>(await send({type:'getState'})).data.source.text),'Context selection');
+  await page.evaluate(sender=>send({type:'hoverDisable'},sender),sender);
   await page.evaluate(()=>menuClick({menuItemId:'select-region'},{id:1,windowId:1,url:'https://example.test/article'}));
   await page.waitForFunction(()=>tabMessages.some(args=>args[1].type==='hoverEnable' && args[1].mode==='region'));
   assert.equal(await page.evaluate(()=>tabMessages.at(-1)[0]),1);
   assert.deepEqual(await page.evaluate(()=>tabMessages.at(-1)[1]),{type:'hoverEnable',enabled:true,mode:'region'});
   assert.equal(await page.evaluate(()=>posted.length),modelCalls);
   assert.equal(await page.evaluate(()=>sidePanelCalls.length),panelCalls);
-  // 原有划词右键入口继续交给侧栏，不与框选混淆。
-  await page.evaluate(()=>menuClick({menuItemId:'translate',selectionText:'Context selection'},{id:1,windowId:1}));
   assert.equal(await page.evaluate(async()=>(await send({type:'getState'})).data.source.text),'Context selection');
-  assert.equal(await page.evaluate(()=>sidePanelCalls.length),panelCalls+1);
   await page.evaluate(()=>command('enter-translation-mode',{id:1,windowId:1}));
   await page.waitForTimeout(50);
   assert.equal(await page.evaluate(()=>tabMessages.filter(args=>args[1].type==='hoverEnable').at(-1)[1].enabled),true);

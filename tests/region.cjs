@@ -58,6 +58,31 @@ async function finish(page, request, result) {
     }), {request, result});
 }
 
+// 点选入口必须能退出正在框选及已固定的选区，重新跟随鼠标选择内容。
+async function verifyModeSwitching(browser) {
+    const page = await setup(browser);
+    await page.evaluate(() => receive({type: 'hoverEnable', enabled: true, mode: 'region'}));
+    assert.equal(await ui(page, '.region-veil').isVisible(), true);
+    await page.evaluate(() => receive({type: 'hoverEnable', enabled: true, mode: 'hover'}));
+    assert.equal(await ui(page, '.region-veil').isVisible(), false);
+    assert.equal(await ui(page, '.region-tip').isVisible(), false);
+    await page.locator('#first').hover();
+    await ui(page, '.trigger.translate').waitFor();
+    assert.equal((await requests(page)).length, 0);
+    await page.evaluate(() => receive({type: 'hoverEnable', enabled: true, mode: 'region'}));
+    const first = await page.locator('#first').boundingBox(), third = await page.locator('#third').boundingBox();
+    await drag(page, {x: first.x + 2, y: first.y + 2}, {x: third.x + 30, y: third.y + 4});
+    assert.equal(await ui(page, '.region-hit').count(), 3);
+    await page.evaluate(() => receive({type: 'hoverEnable', enabled: true, mode: 'hover'}));
+    assert.equal(await ui(page, '.region-hit').count(), 0);
+    assert.equal(await ui(page, '.dock').isVisible(), true);
+    await page.locator('#outside').hover();
+    await ui(page, '.trigger.translate').waitFor();
+    await ui(page, '.trigger.translate').click();
+    assert.equal((await requests(page))[0].text, 'Example (Node.js / TypeScript):');
+    await page.close();
+}
+
 // 混合选区以主要正文而非首个大标题为基准，并验证纯文本切换与响应式更新。
 async function verifyTypography(browser) {
     const html = `<html><body style="margin:0;background:#101417;color:#d7dedf;font:18px/1.7 system-ui">
@@ -139,6 +164,7 @@ async function verifyTypography(browser) {
         const errors = [];
         page.on('pageerror', error => errors.push(error.message));
         fs.mkdirSync(path.resolve(__dirname, '../test-artifacts'), {recursive: true});
+        await verifyModeSwitching(browser);
         await verifyTypography(browser);
         const first = await page.locator('#first').boundingBox(), third = await page.locator('#third').boundingBox();
         const start = {x: first.x + 10, y: first.y + first.height - 3};

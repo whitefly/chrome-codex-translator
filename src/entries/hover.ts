@@ -522,6 +522,8 @@ function installHover(): void {
         let message;
         try { message = pageCommand(value); } catch { return; }
         if (message.type === 'hoverEnable') {
+            // 显式切回点选时撤销框选或扩大后的固定选区，恢复鼠标悬停。
+            if (message.enabled && message.mode === 'hover' && region !== 'hover') close();
             setEnabled(message.enabled);
             if (message.enabled && message.mode === 'region') startRegion();
             respond({ok: true});

@@ -161,10 +161,11 @@ chrome.runtime.onMessage.addListener((value: unknown, sender, respond) => {
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.removeAll(() => {
-        chrome.contextMenus.create({id: 'translate', title: '使用 Codex 翻译选中文字', contexts: ['selection']});
-        chrome.contextMenus.create({id: 'select-region', title: '框选翻译区域',
-            contexts: ['page', 'selection', 'link', 'image', 'video', 'audio'],
-            documentUrlPatterns: ['http://*/*', 'https://*/*', 'file:///*']});
+        for (const [id, title] of [['select-point', '点选'], ['select-region', '框选']] as const) {
+            chrome.contextMenus.create({id, title,
+                contexts: ['page', 'selection', 'link', 'image', 'video', 'audio'],
+                documentUrlPatterns: ['http://*/*', 'https://*/*', 'file:///*']});
+        }
     });
 });
 chrome.action.onClicked.addListener(tab => {
@@ -177,14 +178,9 @@ chrome.commands.onCommand.addListener((command, tab) => {
     if (command === 'enter-translation-mode' && tab?.id !== undefined) void enableHover(tab).catch(error => tasks.fail(error));
 });
 chrome.contextMenus.onClicked.addListener((info, tab) => {
-    if (!tab) return;
-    if (info.menuItemId === 'select-region') { void enableHover(tab, 'region').catch(error => tasks.fail(error)); return; }
-    if (info.menuItemId !== 'translate') return;
-    void chrome.sidePanel.open({windowId: tab.windowId}).catch(error => tasks.fail(error));
-    try {
-        if ((info.selectionText || '').length > 30000) throw new Error('选区超过 30,000 字符');
-        tasks.setSource({mode: 'selection', text: info.selectionText || '', title: tab.title || ''});
-    } catch (error) { tasks.fail(error); }
+    if (!tab || (info.menuItemId !== 'select-point' && info.menuItemId !== 'select-region')) return;
+    const mode = info.menuItemId === 'select-point' ? 'hover' : 'region';
+    void enableHover(tab, mode).catch(error => tasks.fail(error));
 });
 
 async function forgetTab(tabId: number): Promise<void> {
