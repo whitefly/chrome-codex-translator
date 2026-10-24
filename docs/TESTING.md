@@ -56,7 +56,7 @@
 
 手工步骤：
 
-1. Chrome 加载 extension，确认 ID 与注册清单一致。
+1. 运行 npm run build，Chrome 加载 dist，确认 ID 与注册清单一致。
 2. 打开普通 HTTPS 网页，点击扩展、连接 Codex。
 3. 划词后翻译，确认看到逐步更新；复制译文。
 4. 元素模式选择段落，↑ 扩大范围，点击选定；Esc 取消。
@@ -96,3 +96,43 @@ Python 单元测试共 9 项，新增验证总结使用独立提示词、指定�
 ## Translator 抽象回归
 
 `npm test` 覆盖供应商无模型/非流式结果、能力限制、图片字节传递、错误与超时收尾、单任务约束、取消请求匹配、旧增量隔离、关闭资源，以及 Codex 并发/重复启动仅创建一个子进程。原有 Codex 流式与最终结果、总结、取消、图片清理和日志脱敏测试继续保留。所有测试使用假供应商或假子进程，不调用真实模型。真实链路仍需刷新扩展后人工验证。
+
+## 跨元素框选与右键入口（2026-09-29）
+
+通过 `CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run test:ui` 运行完整浏览器回归，使用独立无头 Chrome 和模拟扩展通信。`npm test` 的 19 项 Python 测试也全部通过。
+
+- 新增 `tests/region.cjs`：仅部分相交也选中三条完整列表、实时高亮、反向拖动、选定后保持范围、翻译/总结共用原文、嵌套去重、代码缩进、隐藏/编辑区排除、滚动容器裁剪、空白和轻点、12,000 字符与 200 块上限、底层链接拦截及退出后恢复点击。
+- 覆盖 Esc、失焦、指针取消、窗口变化、切换旧选择器、重选时取消旧任务及迟到结果忽略；整组缓存复用/恢复、任一原文变化后拒绝恢复、滚动定位及 360px 窄屏布局。
+- 后台模拟测试验证原生右键菜单注册、未启用页面通过菜单直接框选、保留原有划词菜单、不自动调用模型或打开侧栏、完整路径组缓存隔离、非法/重复/嵌套/超限路径拒绝、注入脚本顺序以及原有标签与文档路由。
+- 已查看 `test-artifacts/region-drag.png`、`region-result.png`、`region-narrow.png`，确认多块高亮、深色浮卡和窄屏工具栏布局。
+
+真实安装链路尚需手工验收：在 `chrome://extensions` 刷新扩展并刷新目标网页；在普通网页正文或链接上右键，选择「框选翻译区域」（Chrome 可能将多个菜单项收进扩展名称子菜单），不预先开启悬停也应直接出现框选提示。拖动擦过多条列表，松开后点「译 / 总」，确认完整内容与本机 Codex 返回结果。再次右键可重选，Esc 可取消待处理选区。自动化不操作个人 Chrome 配置，也未新增真实模型调用。
+
+## 分层总结、Markdown 与普通文本开关
+
+- `npm test`：19 项 Python 测试通过，总结提示词覆盖核心结论、嵌套要点、短文精简与 Markdown 要求。
+- `CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run test:ui`：使用独立临时 Chrome 和模拟桥接。新增 `tests/markdown.cjs` 验证标题、嵌套列表、有序编号、引用、代码、表格、半截流式输出、HTML/危险链接/远程图片不执行或加载，以及长代码/表格不撑宽页面。
+- 侧栏验证默认开启、忙碌时切换、复制两种格式、保存后重新加载以及存储变更重绘；浮卡验证切换、复制、缓存回看、首次读取已保存的普通文本偏好及窄屏定位。原有后台路由与框选测试继续运行。
+- 检查截图：`test-artifacts/sidepanel-markdown.png`、`sidepanel-plain.png`、`hover-markdown.png`、`hover-markdown-narrow.png` 与 `markdown.png`。
+- 当前环境缺少 Playwright 对应版本的 Chromium，使用本机 Chrome 可执行文件；浏览器启动和本地测试服务需要沙箱外权限。未使用个人浏览器资料，未调用真实模型。真实扩展链路与实际总结质量需刷新扩展、刷新网页、重开侧栏后验证；已有缓存不会自动重新总结。
+
+## 浮卡正文样式匹配
+
+`tests/region.cjs` 新增混合选区：36px 粗体标题、12px 短说明、18px 正文列表和 24px 粗体代码块。验证浮卡采用主要正文的 18px / 400 字重及原行高，Markdown 强调仍加粗，标题仅适度放大，代码字号贴近正文；普通文本切换不改变字号或发起新请求。正文改为 20px 并缩到 360px 视口后，浮卡同步样式且不横向溢出；仅标题选区不叠加标题字号。完整浏览器测试通过，检查 `test-artifacts/typography-mixed.png` 与 `typography-narrow.png`。本次未改模型协议或调用真实模型，实际网页需刷新扩展与页面后验证。
+
+
+## TypeScript 迁移与逻辑收敛（2026-10-24）
+
+迁移前 Python 19 项与原有完整浏览器回归通过。迁移后验证：
+
+- `CHROME_PATH="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" npm run check`：Python 19 项、严格 TS 检查、构建产物检查，以及 Markdown、侧栏、后台、悬停和跨元素框选测试全部通过。
+- `tests/type-contracts.ts` 验证错误截图字段、错误任务类型及错误返回类型在编译期被拒绝。
+- `tests/build.cjs` 验证产物完整、manifest key/权限保持一致、网页注入入口是可独立解析的普通脚本、侧栏只加载模块入口，以及 Marked 许可证随包保留。
+- 后台新增验证：流式广播省略 source，清空显式发送 null；连接中取消立即释放忙状态，迟到 ready 不提交旧任务；取消后的增量丢弃，取消结果不缓存；旧请求错误和其他请求的非法消息不污染当前任务；导航撤销网页调用权限。
+- 侧栏新增验证：省略 source 的广播保留当前原文。浮卡和选择器重复注入仍只初始化一次。
+- 在独立临时项目副本验证 dev 的首次构建、持续类型检查、TS 修改后重编译，以及静态资源新增、更新和删除同步。退出 dev 时同时清理类型检查启动器及原生编译器。
+- 查看迁移后的 `test-artifacts/sidepanel-markdown.png` 与 `typography-mixed.png`，侧栏及浮卡排版保持正常；其他窄屏与框选回归继续通过。
+
+环境：Node.js 23.10.0、TypeScript 7.0.2、esbuild 0.28.2、本机独立无头 Chrome。沙箱阻止浏览器启动及文件系统监听，相关验证在授权后运行；未使用个人浏览器资料、未调用真实模型。
+
+本次 UI 与后台测试使用编译产物和模拟 Chrome/Native Messaging，Markdown 单元测试单独打包源码模块。真实 Chrome 扩展安装、Service Worker 生命周期与 Python Native Messaging 联合链路仍需手工验收：从旧 extension 加载项切换到 dist，核对固定 ID，刷新目标网页并重开侧栏，再检查翻译、总结、截图与取消。

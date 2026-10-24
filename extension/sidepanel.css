@@ -341,3 +341,44 @@ button:focus-visible {
     width: 100%;
     font-size: 12px
 }
+
+/* 开关与偏好共用同一存储，窄侧栏也保持标签可读。 */
+.markdown-setting {
+    gap: 12px;
+    margin: 12px 0 0;
+    color: var(--ink)
+}
+
+.markdown-setting small {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 3px
+}
+
+.markdown-setting input {
+    appearance: none;
+    flex-shrink: 0;
+    width: 32px;
+    height: 18px;
+    margin: 0;
+    border-radius: 10px;
+    background: #a6b4af;
+    cursor: pointer;
+    position: relative
+}
+
+.markdown-setting input::after {
+    content: '';
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    left: 2px;
+    top: 2px;
+    border-radius: 50%;
+    background: white
+}
+
+.markdown-setting input:checked { background: var(--accent) }
+.markdown-setting input:checked::after { left: 16px }
+.markdown-setting input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px }

@@ -41,7 +41,7 @@ Chrome Native Messaging 是 UTF-8 JSON，前置 4 字节本机字节序长度。
 {"type":"done","requestId":"uuid","text":"你好","cancelled":false}
 ```
 
-错误后仍发送 `done` 以释放 UI 忙状态；UI 必须保留错误提示。连接失败的错误没有 requestId。不能把模型文字作为 HTML 注入，界面使用 textContent。
+错误后仍发送 `done` 以释放 UI 忙状态；UI 必须保留错误提示。连接失败的错误没有 requestId。不能把模型文字作为 HTML 注入：Markdown 先词法解析，再通过固定标签的 DOM 节点和 textContent 显示。
 
 ## 选区与截图
 
@@ -74,7 +74,7 @@ Host 已通过 Translator 接口解耦供应商，前端保持 connect/translate
 
 ## 0.2 悬停交互
 
-新增 extension/hover.js，使用 Shadow DOM 隔离样式。普通悬停 450ms 显示“译”；可信鼠标点击或 Option/Alt 悬停发起请求。过滤输入框、可编辑区域和超过 12,000 字符的容器，拒绝页面伪造的 pointer/key 事件。原文始终不改写。
+新增悬停入口（现为 `src/entries/hover.ts`），使用 Shadow DOM 隔离样式。普通悬停 450ms 显示“译”；可信鼠标点击或 Option/Alt 悬停发起请求。过滤输入框、可编辑区域和超过 12,000 字符的容器，拒绝页面伪造的 pointer/key 事件。原文始终不改写。
 
 工具栏点击通过 activeTab 注入脚本；不新增全站 host_permissions。后台在 storage.session 保存当前会话中启用的标签 ID，以便 Service Worker 休眠重启后恢复权限记录；导航/关闭标签时清除。
 
@@ -82,12 +82,22 @@ Host 已通过 Translator 接口解耦供应商，前端保持 connect/translate
 
 hoverTranslate 使用 storage.local 保存的模型/思考强度/目标语言，必要时自动连接 Native Messaging。连接阶段即可取消；提交后调用同一个 native cancel 协议。关闭浮卡会取消进行中的请求，忽略迟到事件。仅支持单个全局翻译任务，不会因切换段落默默发起并发请求。
 
-悬停结果保存在 `chrome.storage.session` 的会话内存，按 tab ID + 不含 hash 的页面 URL 分隔，每页最多 60 个段落。记录 DOM 子元素路径和原文；刷新后仅当路径与文字都匹配才恢复标记，避免把旧结果贴到新内容。单个段落分别存 `translate` 与 `summary`，只有成功完成的请求写入，取消或报错不写入。浏览器会话结束后缓存清除，不增加长期磁盘翻译历史。卡片位置及标记随滚动/resize 重算，通过 textContent 显示结果，避免执行模型生成的 HTML。
+悬停结果保存在 `chrome.storage.session` 的会话内存，按 tab ID + 不含 hash 的页面 URL 分隔，每页最多 60 个段落。记录 DOM 子元素路径和原文；刷新后仅当路径与文字都匹配才恢复标记，避免把旧结果贴到新内容。单个段落分别存 `translate` 与 `summary`，只有成功完成的请求写入，取消或报错不写入。浏览器会话结束后缓存清除，不增加长期磁盘翻译历史。卡片位置及标记随滚动/resize 重算，渲染模型结果只创建固定标签与文本节点，避免执行模型生成的 HTML。
 
 ## 0.3 总结、暂存与快捷键
 
 普通悬停 450ms 显示“译 / 总”，两种操作共享现有 Native Messaging 流和单任务限制。`hoverTranslate` 携带 `kind` 与段落路径，后台以 `task: summary` 或 `task: translate` 转发给 Python host；host 为摘要使用独立提示词，仍按当前设置的目标语言返回。后台验证请求来源是已启用的顶层标签，并按 `documentId` 回传流式状态。扩展命令 `enter-translation-mode` 在当前标签启用模式，无默认按键；侧栏通过 `chrome.commands.getAll()` 显示用户绑定，并提供 Chrome 快捷键设置入口。Esc 与停用按钮共用退出逻辑，清理页面状态并通过 `hoverDisable` 撤销后台启用状态。
 
+
+## 跨元素矩形选择
+
+启用网页模式时注入自包含的 `hover.js`。源码 `src/page/region-selection.ts` 负责正文块发现、矩形相交、文本提取、DOM 路径和缓存恢复；`src/entries/hover.ts` 负责显式框选入口、指针捕获、实时高亮、浮卡与取消。普通悬停和框选共用 `{elements, paths, source}` 选区对象，单段落也是只有一个元素的选区。
+
+通过 Chrome 网页右键菜单「框选翻译区域」或右下角「框选」开启遮罩。右键入口复用 `activeTab` 授权，注入后发送 `hoverEnable`，以 `mode: region` 直接进入框选，无需提前启用悬停。矩形与段落、列表项、标题、代码块等语义块相交即纳入完整内容；缺少语义块时使用不含下级正文块的普通容器。按 DOM 顺序合并，命中集合内的后代去重，不选取公共祖先。可编辑区、表单、隐藏元素和扩展 UI 被排除，相交计算裁去视口及祖先滚动容器外的部分。提取保留块级换行及代码缩进，不发送 HTML。每帧合并拖动更新；松开后固定选区，点击操作才调用模型。反向拖动、空白、轻点、超限、Esc、失焦、指针中断和切换选择器均有显式收尾。
+
+`hoverTranslate` 使用 `paths: number[][]` 替代单一 `path`，原有 `requestId/text/kind` 不变。后台限制 1–200 条非空路径、每条最多 30 层，拒绝非法索引、重复路径和祖先/后代重叠；原文合计仍不超过 12,000 字符。完整路径组参与 `pageCache:v2:<tabId>:<URL>` 的记录键，缓存最多 60 个选区，全部路径和原文一致才恢复。旧缓存格式不迁移。保留已有标签授权、documentId 路由、请求取消及单任务约束。
+
+侧边栏和 Python host 接收到的仍是合并后的纯文本及原有任务类型，无需改动 Native Messaging 消息。框选不会扩大 Chrome 读取权限。
 
 ## Translator 边界
 
@@ -100,3 +110,31 @@ Host 创建时注入一个长期复用的 Translator；默认使用 Codex。能�
 `CodexClient.start()` 通过启动锁和进程存活检查复用同一 app-server。临时会话及图片按请求清理，150 秒结果等待与 35 秒协议调用超时仍由 Codex 实现管理。Chrome 无法向接口传入任意本地文件路径。
 
 本次未接入有道 API、密钥或服务切换界面。未来接入时实现 Translator 并注入 Host，再扩展前端服务选择、语言和能力展示；当前前端仍按 Codex 模型列表工作。
+
+## Markdown 与显示偏好
+
+Codex 提示词统一要求 Markdown，翻译保留原文结构，总结按核心结论、主题要点与必要子要点组织；消息契约和单请求约束不变。原始结果仍保存于后台与会话缓存，`chrome.storage.local.markdown` 是纯展示偏好，只有布尔值 `false` 表示普通文本，缺省为 Markdown。
+
+侧边栏和浮卡从 `src/shared/markdown.ts` 导入同一渲染实现，构建时各自打包固定版本的 Marked，无运行时脚本加载顺序或共享全局对象。Marked 只负责词法解析，共用模块将 token 转成固定标签的 DOM 树，文字通过 textContent / Text 节点写入，不使用模型生成的 HTML，不创建可导航链接或图片请求。普通文本从相同结构导出，保留段落、列表层次、编号与代码内容。复制按当前显示模式选择 Markdown 原文或普通文本。
+
+两个视图监听 storage.onChanged，切换时立即重绘已有结果，浮卡重新计算位置，不发起模型请求。未变化的文本不重复解析。代码块和表格在结果区域内滚动，适配窄侧栏与原网页字体、颜色。依赖随扩展打包，不新增权限或网络服务；构建流程、依赖来源和许可证见下文。
+
+浮卡从选区元素及内部正文块挑选排版基准：排除标题、代码、表头、导航和强调元素，去除包含下级正文块的重复候选，优先常规字重与非斜体，按同类字体样式的可见文本量选择主要正文。仅标题或强调内容则取其父容器，纯代码仍沿用代码块样式。定位更新时重新读取样式以跟随响应式页面。浮卡通过 CSS 变量将 Markdown 标题倍率限制为 1.04–1.16、代码字号设为正文的 0.96、表格字号设为正文的 1 倍；侧边栏保留独立的默认排版。
+
+
+## TypeScript 构建与职责（2026-10-24）
+
+- `src/entries/background.ts` 注册 Chrome 事件、验证调用方、分发消息和裁剪截图。
+- `src/background/tasks.ts` 统一侧栏与悬停任务的准备、提交、取消、结果与错误收尾。当前任务只有 preparing / running / cancelling 三个阶段；无当前任务表示空闲，busy 从任务存在性推导。
+- `src/background/native-client.ts` 独立管理长期 Native Port、就绪 Promise 与连接超时。准备阶段取消通过 AbortSignal 结束等待，迟到的 ready 不会提交已取消任务；已经提交的取消保持忙碌直到收到 done 或连接断开。
+- 请求携带 panel / hover 来源；hover 来源包含标签、文档、页面 URL 与路径。只有当前请求接收增量和错误，取消后的增量丢弃，成功的最终结果才写入页面缓存。
+- `src/shared/contracts.ts` 定义消息联合、请求返回值映射、原文、模型、偏好和缓存。`validation.ts` 在消息、Native Port 和存储入口解析 unknown，Python host 仍独立验证请求。
+- 完整状态必须包含 source，广播只允许省略 source。省略表示保留，null 表示清空，流式刷新不重复传输截图。
+- 悬停、框选中、已选定使用单一交互状态；模型请求独立记录运行/结束阶段。浮卡展示统一经 renderResult，模板与正文外观在 `src/page/hover-view.ts`。
+- 原有全局 Markdown 和选区对象已移除，仅保留每个文档的入口初始化标记，防止重复注入创建额外监听器。
+
+`tsc --noEmit` 执行严格类型检查，开启 noUncheckedIndexedAccess、exactOptionalPropertyTypes 和 isolatedModules。esbuild 按 manifest 的最低 Chrome 版本打包：后台和侧栏为 ESM，hover/content 为自包含 IIFE，不拆分运行时 chunk。静态资源和依赖许可证一起复制到 dist，Chrome 只加载 dist。dev 监听源码及静态文件的新增、更新与删除，并独立持续报告类型错误；build 必须先通过类型检查。
+
+Marked 固定为 npm `marked@18.0.14`，源码：https://github.com/markedjs/marked ，MIT 许可证构建时复制到 `dist/licenses/marked.LICENSE`。更新版本需同步 package.json / package-lock.json，并运行完整回归；不再维护手工复制的 UMD 文件。所有脚本本地打包，不使用 CDN，不增加 web_accessible_resources 或网站权限。
+
+Native Messaging 字段、Python Translator 边界、manifest key 和权限保持现有约定。开发版改为加载 dist 后应核对扩展 ID；旧版 extension 加载项需移除后重新加载生成目录。

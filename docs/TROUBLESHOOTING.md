@@ -2,6 +2,7 @@
 
 | 现象 | 检查方法 |
 |---|---|
+| 加载扩展提示缺少 background.js | 不要加载静态资源目录 extension；先 npm ci、npm run build，再加载 dist |
 | Specified native messaging host not found | 检查安装命令是否成功，注册清单文件名必须为 com.local.codex_translator.json；Chrome 与 Chromium/其他浏览器的注册目录不同 |
 | Access to the specified native messaging host is forbidden | 核对 chrome://extensions 的扩展 ID 和清单 allowed_origins；重新运行安装脚本 |
 | Native host has exited | 运行 scripts/doctor.py，检查 Python、Codex 路径和版本；移动项目后需要重装桥接 |
@@ -11,7 +12,7 @@
 | 元素按钮无法选区 | 在当前标签点击扩展图标授予 activeTab；Chrome 内部页/商店/跨域 iframe 不支持，换普通网页或粘贴文字 |
 | 截图与内容不一致 | 框选后不要切标签、滚动或改变缩放；先打开侧边栏再框选；初版仅捕获当前视口 |
 | 文本/图片过大 | 缩小区域；上限 30,000 字符 / 8 MB PNG |
-| 修改代码后还是旧版本 | 在 chrome://extensions 刷新扩展；关闭再打开面板，使旧 Native Messaging 连接退出 |
+| 修改代码后还是旧版本 | 先运行 npm run build 或保持 npm run dev；确认 Chrome 加载 dist，在 chrome://extensions 刷新扩展、刷新网页并重开侧栏 |
 
 浏览器侧：chrome://extensions → 本扩展 → Service Worker 检查视图。页面选区异常可检查网页控制台。host 的 stdout 专供 Chrome 帧协议使用，不能添加 print 调试日志；如需临时日志，只写 stderr，并避免记录原文、截图和登录信息。
 
@@ -27,7 +28,7 @@
 - 单任务运行期间，其他段落/标签会提示已有翻译；先关闭或停止原浮卡。
 - Esc 或右下角 × 退出本页翻译模式，并取消进行中的请求。浮卡右上角 × 仅关闭结果，关闭进行中的结果也会发送取消请求。
 - 点击“总”可总结当前段落；完成后段落旁的“已译 / 已总 / 译·总”可点击回看。刷新后需重新启用悬停模式才能显示当前会话的标记；页面改版或文字变化会使旧标记不匹配。
-- 默认使用 `Control+Shift+Y`（macOS）或 `Alt+Shift+Y`（其他平台）切换悬停模式。若无反应，在 `chrome://extensions/shortcuts` 查看是否被 Chrome 或其他扩展占用。
+- 默认没有快捷键。通过侧栏「设置快捷键」或 `chrome://extensions/shortcuts` 为「进入当前网页的翻译模式」绑定按键。
 
 
 ## 回传诊断日志
