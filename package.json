@@ -4,7 +4,7 @@
   "private": true,
   "description": "Chrome translation extension with a Python Codex App Server bridge",
   "scripts": {
-    "test:ui": "npm run build && node tests/build.cjs && node tests/markdown.cjs && node tests/ui.cjs && node tests/background.cjs && node tests/hover.cjs && node tests/region.cjs",
+    "test:ui": "npm run build && node tests/build.cjs && node tests/markdown.cjs && node tests/ui.cjs && node tests/background.cjs && node tests/hover.cjs && node tests/region.cjs && node tests/expand.cjs",
     "test": "python3 -B -m unittest discover -s tests -v",
     "typecheck": "tsc --noEmit",
     "build": "npm run typecheck && node scripts/build.mjs",

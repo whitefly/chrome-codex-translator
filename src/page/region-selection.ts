@@ -50,6 +50,22 @@ export function current(selection: PageSelection | null | undefined): selection 
     return connected(selection) && selection.elements.map(readText).join('\n\n') === selection.source;
 }
 
+// 跳过只有排版变化的空壳祖先，每次扩大到确实增加正文的最近一层。
+export function expand(selection: PageSelection): {ok: true; selection: PageSelection} | {ok: false; reason: string} {
+    if (!current(selection)) return {ok: false, reason: '选区内容已变化，请重新选择'};
+    const sourceLength = selection.source.replace(/\s+/g, ' ').trim().length;
+    for (let parent = selection.elements[0]?.parentElement; parent && parent !== document.body; parent = parent.parentElement) {
+        if (parent === document.documentElement || parent.closest(excluded)) break;
+        if (!selection.elements.every(element => parent.contains(element))) continue;
+        const next = fromElements([parent]);
+        if (!next || next.source.replace(/\s+/g, ' ').trim().length <= sourceLength) continue;
+        if (next.source.length > 12000) return {ok: false, reason: '扩大后超过 12,000 字符，无法继续扩大'};
+        const rect = parent.getBoundingClientRect();
+        if (rect.width > 5 && rect.height > 5) return {ok: true, selection: next};
+    }
+    return {ok: false, reason: '已到最大可选范围'};
+}
+
 // 缓存必须同时匹配全部元素的位置和原文，任何一块变化都使该条失效。
 export function restore(paths: Paths, source: string): PageSelection | null {
     try { selectionPaths(paths); } catch { return null; }

@@ -1,4 +1,5 @@
 import type {CacheEntry, Paths, TaskKind} from '../shared/contracts';
+import {required} from '../shared/dom';
 import {createHoverView, matchAppearance} from '../page/hover-view';
 import {send} from '../shared/messaging';
 import * as markdown from '../shared/markdown';
@@ -32,6 +33,7 @@ function installHover(): void {
     let drag: {id: number; start: Point; end: Point} | undefined;
     let candidates: HTMLElement[] = [], regionFrame: number | undefined;
     const {host, root, $} = createHoverView();
+    const expandButton = required(root, '.trigger.expand', HTMLButtonElement);
     let markdownEnabled = true, formatChanged = false;
     markdown.install(root);
     // 监听先于初次读取，避免启动期间的旧偏好覆盖用户刚切换的格式。
@@ -131,6 +133,29 @@ function installHover(): void {
 
     function hideTriggers() {
         root.querySelectorAll<HTMLButtonElement>('.trigger').forEach(button => button.hidden = true);
+    }
+
+    function showTriggers() {
+        if (!target) return;
+        const next = selection.expand(target);
+        expandButton.disabled = !next.ok;
+        expandButton.title = next.ok ? '扩大选区 · 每次增加一层正文范围' : next.reason;
+        root.querySelectorAll<HTMLButtonElement>('.trigger').forEach(button => button.hidden = false);
+    }
+
+    function expandTarget() {
+        if (!enabled || !target || !$('.card').hidden || region === 'selecting') return;
+        clearTimeout(timer);
+        keyHeld = false;
+        const next = selection.expand(target);
+        if (next.ok) {
+            target = next.selection;
+            region = 'selected';
+            $('.region-tip').hidden = false;
+        }
+        showTriggers();
+        if (next.ok) $('.region-tip').textContent = `已选 ${target.source.length} 字符${expandButton.disabled ? '' : ' ·「+」继续扩大'} · Esc 取消`;
+        position();
     }
 
     // 关闭时一并撤销选区与任务，让迟到的结果失去接收目标。
@@ -278,7 +303,7 @@ function installHover(): void {
         region = 'selected';
         $('.region-veil').hidden = true;
         $('.region-tip').textContent = `已选 ${target?.elements.length ?? 0} 个内容块 · 点击「译 / 总」 · Esc 取消`;
-        root.querySelectorAll<HTMLButtonElement>('.trigger').forEach(button => button.hidden = false);
+        showTriggers();
         position();
     });
     $('.region-veil').addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); });
@@ -292,7 +317,7 @@ function installHover(): void {
         frame = undefined;
         const element = anchor || target;
         if (!selection.connected(element)) {
-            if (anchor) close();
+            if (anchor || region === 'selected') close();
             $('.hint').hidden = true;
             hideTriggers();
             drawMarkers();
@@ -322,10 +347,12 @@ function installHover(): void {
                 top: top + 'px'
             });
         } else {
-            const left = Math.max(8, Math.min(r.right - 68, innerWidth - 80)),
+            const left = Math.max(8, Math.min(r.right - 104, innerWidth - 116)),
                 top = Math.max(8, Math.min(r.top - 30, innerHeight - 40));
             Object.assign($('.trigger.translate').style, {left: left + 'px', top: top + 'px'});
             Object.assign($('.trigger.summary').style, {left: (left + 36) + 'px', top: top + 'px'});
+            Object.assign($('.trigger.expand').style, {left: (left + 72) + 'px', top: top + 'px'});
+            root.querySelectorAll<HTMLButtonElement>('.trigger').forEach(button => button.style.visibility = visible ? 'visible' : 'hidden');
         }
         drawMarkers();
     }
@@ -412,7 +439,7 @@ function installHover(): void {
         position();
         timer = setTimeout(() => {
             if (!enabled || !target) return;
-            if (!recordFor(target)) root.querySelectorAll<HTMLButtonElement>('.trigger').forEach(button => button.hidden = false);
+            showTriggers();
             if (keyHeld) void run('translate');
         }, 450);
     }
@@ -460,6 +487,9 @@ function installHover(): void {
     };
     $('.trigger.summary').onclick = event => {
         if (event.isTrusted) void run('summary');
+    };
+    $('.trigger.expand').onclick = event => {
+        if (event.isTrusted) expandTarget();
     };
     root.querySelectorAll<HTMLButtonElement>('.operation').forEach(button => button.onclick = () => {
         if (!isBusy()) {
