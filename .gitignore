@@ -8,3 +8,4 @@ node_modules/
 test-artifacts/
 log/
 dist/
+.idea/
